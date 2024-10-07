@@ -1,24 +1,14 @@
 # Securing RESTful APIs with JWT
 
-![]()
+To install this test server in local please follow the steps.
 
-How to secure a Nodejs RESTful CRUD API using JSON web tokens?
+1. Download git repo to your local.
+Using git : `gh repo clone web-contributor/simple-api-nodejs-server`
 
-This tutorial will demo how to use JWT with an existing bare bones 
-API using mongodb as the database.
+2. Install dependencies.
+cd to the project, and do `npm install`.
 
-It consist of a User model and controller. The model
-defines the data, and the controller will contain all 
-the business logic needed to interact with the database. 
+3. Run dev server.
+`npm run dev`
 
-It has a db file which will be used to
-connect the app to the database, and an app file used
-for bootstrapping the application itself.
-
-The server file is used to spin up the server and tells the
-app to listen on a specific port.
-
-The auth folder contains the configuration for registering and 
-logging users in, signing and verifying tokens.
-
-Follow the tutorial for this repository at https://medium.freecodecamp.org/securing-node-js-restful-apis-with-json-web-tokens-9f811a92bb52
+Server will be running on port 3000.
