@@ -4,6 +4,20 @@ var bodyParser = require('body-parser');
 
 router.use(bodyParser.urlencoded({ extended: false }));
 
+var config = {
+    start: 0,
+    end: 0,
+    enabled: 0,
+    activate: 0,
+    schedules: [{
+        start: 130,
+        end: 230,
+    }, {
+        start: 530,
+        end: 830,
+    }],
+};
+
 let encode = (text) => {
     let enc = text.split('').map((ch, idx) => {
         let val = ch.charCodeAt(0);
@@ -71,17 +85,81 @@ let decode = (text) => {
     return dec;
 }
 
-router.get('/:cmd', function (req, res) {
-    console.log("Received Command : ", req.params.cmd);
+const status = () => {
+    let date = new Date();
+    let current = date.getHours() * 100 + date.getMinutes();
 
+    let val = config.enabled;
+
+    if (config.activate) val = val | 0x02;
+    if (config.activate) val = val | 0x04;
+    else if (config.enabled && current >= config.start && current < config.end) val = val | 0x08;
+
+    return val;
+}
+
+const fourDigit = (val) => {
+    if (val < 10) return "000" + val;
+    if (val < 100) return "00" + val;
+    if (val < 1000) return "0" + val;
+    return "" + val;
+}
+
+router.get('/:cmd', function (req, res) {
     if (req.params.cmd.indexOf("cmd=") > -1) {
 
         let cmd = req.params.cmd.replace('cmd=', '');
-        let ret = `
-            Recevied Command : ${cmd}<br/>
-            Decoded Command : ${decode(cmd)}
-        `;
-        return res.send(ret);
+
+        if (cmd == 'ping') return setTimeout(() => res.send("OK"), 1000);
+
+        cmd = decode(cmd);
+
+        console.log("Received Command : ", cmd);
+
+        if (cmd.indexOf('disablesch') > -1) {
+
+            config.enabled = 0;
+
+        } else if (cmd.indexOf('enablesch') > -1) {
+
+            config['enabled'] = 1;
+
+        } else if (cmd.indexOf('getsch') > -1) {
+
+            let info = config.schedules.map((schedule) => {
+                return `${fourDigit(schedule.start)}${fourDigit(schedule.end)}`;
+            });
+            let result = info.join('Y') + 'Z';
+            console.log("Schedule Result", result);
+            return setTimeout(() => res.send(result), 1000);
+
+        } else if (cmd.indexOf('sch') > -1) {
+
+            let info = cmd.substring(3).split('Y');
+            let schedules = info.map((item) => {
+                if (item.indexOf('Z') > -1) item = item.replace('Z', '');
+                let start = parseInt(item.substring(0, 4));
+                let end = parseInt(item.substring(4));
+                return {start, end};
+            });
+
+            config['schedules'] = schedules;
+            console.log("Status", config);
+
+            return setTimeout(() => res.send("OK"), 1000);
+
+        } else if (cmd.indexOf('deactivate') > -1) {
+
+            config.activate = 0;
+
+        } else if (cmd.indexOf('activate') > -1) {
+
+            config.activate = 1;
+
+        }
+
+        console.log("Status", config, status());
+        return setTimeout(() => res.send(`${status()}`), 1000);
 
     } else if (req.params.cmd.indexOf("enc=") > -1) {
 
