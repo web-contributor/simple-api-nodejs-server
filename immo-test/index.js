@@ -12,9 +12,11 @@ var config = {
     schedules: [{
         start: 130,
         end: 230,
+        weekday: 0,
     }, {
         start: 530,
         end: 830,
+        weekday: 0,
     }],
 };
 
@@ -51,10 +53,15 @@ let encode = (text) => {
     return enc;
 }
 
-let decode = (text) => {
+let decode = (text, key = "12345678") => {
+    let keyIdx = 0;
     let dec = text.split('').map((ch, idx) => {
         let val = ch.charCodeAt(0);
+        let op = key.charCodeAt(keyIdx);
         let offset = 0, mode = 0;
+        let move = 0;
+
+        keyIdx = (keyIdx + 1) % key.length;
 
         if (val >= 97 && val <= 122) {
             offset = 97;
@@ -72,10 +79,11 @@ let decode = (text) => {
             offset = 0;
             mode = 256;
         }
+        move = op % mode;
 
         val -= offset;
-        val -= 8;
-        if (val < 0) val += mode;
+        if (val < move) val += mode;
+        val -= move;
         val %= mode;
         val += offset;
 
@@ -98,11 +106,16 @@ const status = () => {
     return val;
 }
 
-const fourDigit = (val) => {
-    if (val < 10) return "000" + val;
-    if (val < 100) return "00" + val;
-    if (val < 1000) return "0" + val;
-    return "" + val;
+const digitFormat = (val, len = 4) => {
+    let idx = 0;
+    let formatted = '';
+    while(idx < len) {
+        formatted = (val % 10) + formatted;
+        val = Math.floor(val / 10);
+        idx++;
+    }
+
+    return formatted;
 }
 
 router.get('/:cmd', function (req, res) {
@@ -114,7 +127,7 @@ router.get('/:cmd', function (req, res) {
 
         cmd = decode(cmd);
 
-        console.log("Received Command : ", cmd);
+        console.log("\n\nReceived Command : ", cmd);
 
         if (cmd.indexOf('disablesch') > -1) {
 
@@ -127,7 +140,7 @@ router.get('/:cmd', function (req, res) {
         } else if (cmd.indexOf('getsch') > -1) {
 
             let info = config.schedules.map((schedule) => {
-                return `${fourDigit(schedule.start)}${fourDigit(schedule.end)}`;
+                return `${digitFormat(schedule.weekday, 3)}${digitFormat(schedule.start)}${digitFormat(schedule.end)}`;
             });
             let result = info.join('Y') + 'Z';
             console.log("Schedule Result", result);
@@ -138,9 +151,10 @@ router.get('/:cmd', function (req, res) {
             let info = cmd.substring(3).split('Y');
             let schedules = info.map((item) => {
                 if (item.indexOf('Z') > -1) item = item.replace('Z', '');
-                let start = parseInt(item.substring(0, 4));
-                let end = parseInt(item.substring(4));
-                return {start, end};
+                let weekday = parseInt(item.substring(0, 3));
+                let start = parseInt(item.substring(3, 7));
+                let end = parseInt(item.substring(7));
+                return {start, end, weekday};
             });
 
             config['schedules'] = schedules;
