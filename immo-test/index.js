@@ -1,7 +1,8 @@
 var express = require('express');
 var router = express.Router();
 var bodyParser = require('body-parser');
-
+// u5Zd9&e32xt^&XX
+const encodeKey = "123";
 router.use(bodyParser.urlencoded({ extended: false }));
 
 var config = {
@@ -10,20 +11,23 @@ var config = {
     enabled: 0,
     activate: 0,
     schedules: [{
-        start: 130,
-        end: 230,
-        weekday: 0,
+        start: 2359,
+        end: 0,
+        weekday: 127,
     }, {
-        start: 530,
-        end: 830,
-        weekday: 0,
+        start: 1,
+        end: 2,
+        weekday: 127,
     }],
 };
 
-let encode = (text) => {
-    let enc = text.split('').map((ch, idx) => {
+let encode = (text, key = encodeKey) => {
+    let keyIdx = 0;
+    let enc = text.split('').map((ch) => {
         let val = ch.charCodeAt(0);
         let offset = 0, mode = 0;
+        let op = key.charCodeAt(keyIdx) + key.length;
+        keyIdx = (keyIdx + 1) % key.length;
 
         if (val >= 97 && val <= 122) {
             offset = 97;
@@ -41,9 +45,12 @@ let encode = (text) => {
             offset = 0;
             mode = 255;
         }
+        let move = op % mode;
+
+        if (val < offset) val += mode;
 
         val -= offset;
-        val += 8;
+        val += move;
         val %= mode;
         val += offset;
 
@@ -55,9 +62,10 @@ let encode = (text) => {
 
 let decode = (text, key = "12345678") => {
     let keyIdx = 0;
-    let dec = text.split('').map((ch, idx) => {
+    let dec = text.split('').map((ch) => {
         let val = ch.charCodeAt(0);
-        let op = key.charCodeAt(keyIdx);
+        let len = key.length;
+        let op = key.charCodeAt(keyIdx) + len;
         let offset = 0, mode = 0;
         let move = 0;
 
@@ -122,20 +130,25 @@ router.get('/:cmd', function (req, res) {
     if (req.params.cmd.indexOf("cmd=") > -1) {
 
         let cmd = req.params.cmd.replace('cmd=', '');
+        let flag = false;
+
+        console.log("\n\nReceived Command : ", cmd);
 
         if (cmd == 'ping') return setTimeout(() => res.send("OK"), 1000);
 
         cmd = decode(cmd);
 
-        console.log("\n\nReceived Command : ", cmd);
+        console.log("Decoded Command : ", cmd);
 
         if (cmd.indexOf('disablesch') > -1) {
 
             config.enabled = 0;
+            flag = true;
 
         } else if (cmd.indexOf('enablesch') > -1) {
 
             config['enabled'] = 1;
+            flag = true;
 
         } else if (cmd.indexOf('getsch') > -1) {
 
@@ -165,15 +178,28 @@ router.get('/:cmd', function (req, res) {
         } else if (cmd.indexOf('deactivate') > -1) {
 
             config.activate = 0;
+            flag = true;
 
         } else if (cmd.indexOf('activate') > -1) {
 
             config.activate = 1;
+            flag = true;
+
+        } else if (cmd.indexOf('status') > -1) {
+
+            flag = true;
+
+        } else if (cmd.indexOf('time') > -1) {
+
+            console.log("Set current time");
+            flag = true;
 
         }
 
-        console.log("Status", config, status());
-        return setTimeout(() => res.send(`${status()}`), 1000);
+        if (flag) return setTimeout(() => res.send(`${status()}`), 1000);
+        
+        console.log("Wrong command! Maybe security code? => " + cmd);
+        return setTimeout(() => res.send(`wrong`), 1000);
 
     } else if (req.params.cmd.indexOf("enc=") > -1) {
 
